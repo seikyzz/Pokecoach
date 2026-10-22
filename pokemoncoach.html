@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéCoach - Simulador Tático de Batalha (Com Sprites)</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --hp-green: #22c55e;
+      --hp-yellow: #eab308;
+      --hp-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 12px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    .level-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .lvl-pill {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .lvl-pill.active {
+      background: #f59e0b;
+      color: #0f172a;
+      border-color: #f59e0b;
+    }
+
+    .lvl-pill.done {
+      border-color: #22c55e;
+      color: #4ade80;
+    }
+
+    /* Arena estilo GBA / Showdown */
+    .arena {
+      background: linear-gradient(180deg, #1e3a5f 0%, #163821 60%, #0d2210 100%);
+      border: 3px solid #475569;
+      border-radius: 14px;
+      padding: 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      min-height: 280px;
+      justify-content: space-between;
+    }
+
+    .field-hazard {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      background: rgba(239, 68, 68, 0.25);
+      border: 1px solid #f87171;
+      color: #fecaca;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      z-index: 2;
+    }
+
+    .combatant-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .enemy-row {
+      flex-direction: row-reverse;
+      align-items: flex-start;
+    }
+
+    .poke-hud {
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 12px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .poke-name {
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .type-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .t-Planta { background: #16a34a; }
+    .t-Veneno { background: #9333ea; }
+    .t-Fogo { background: #ea580c; }
+    .t-Água { background: #2563eb; }
+    .t-Elétrico { background: #ca8a04; }
+    .t-Terra { background: #b45309; }
+    .t-Fantasma { background: #4f46e5; }
+    .t-Sombrio { background: #334155; border: 1px solid #64748b; }
+    .t-Psíquico { background: #db2777; }
+    .t-Aço { background: #64748b; }
+    .t-Voador { background: #0284c7; }
+    .t-Lutador { background: #dc2626; }
+    .t-Dragão { background: #4338ca; }
+    .t-Gelo { background: #0891b2; }
+    .t-Fada { background: #ec4899; }
+    .t-Normal { background: #78716c; }
+    .t-Inseto { background: #65a30d; }
+
+    .hp-container {
+      background: #334155;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 6px 0;
+      border: 1px solid #475569;
+    }
+
+    .hp-bar {
+      height: 100%;
+      background: var(--hp-green);
+      width: 100%;
+      transition: width 0.5s ease, background-color 0.3s;
+    }
+
+    .stats-mini {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      background: rgba(255,255,255,0.06);
+      padding: 5px 8px;
+      border-radius: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .stat-highlight {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .status-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .status-tag {
+      background: #312e81;
+      border: 1px solid #818cf8;
+      color: #e0e7ff;
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* Sprites Oficiais */
+    .poke-sprite-box {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .poke-img {
+      max-width: 110px;
+      max-height: 110px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.6));
+      transition: transform 0.2s;
+    }
+
+    .hit-anim {
+      animation: shake 0.4s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px) scale(0.92); filter: brightness(1.5) drop-shadow(0 8px 12px rgba(239, 68, 68, 0.8)); }
+      75% { transform: translateX(10px) scale(1.08); }
+    }
+
+    .battle-log {
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .log-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #f59e0b;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .controls-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 14px 0 8px 0;
+    }
+
+    .xray-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1e293b;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .xray-toggle.active {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
+    .moves-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .moves-grid {
+        grid-template-columns: 1fr;
+      }
+      .combatant-row, .enemy-row {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    .move-btn {
+      background: var(--bg-card);
+      border: 2px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--text-main);
+      text-align: left;
+      cursor: pointer;
+      transition: 0.15s;
+      position: relative;
+    }
+
+    .move-btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .move-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .move-name {
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .move-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .xray-box {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed #475569;
+      font-size: 0.78rem;
+      color: #fde047;
+      display: none;
+    }
+
+    .xray-box.show {
+      display: block;
+    }
+
+    .bench-section {
+      margin-top: 12px;
+    }
+
+    .bench-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .switch-btn {
+      background: #172554;
+      border: 1px solid #3b82f6;
+      color: #eff6ff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .switch-btn:hover {
+      background: #1e3a8a;
+    }
+
+    .coach-panel {
+      margin-top: 14px;
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
+      border: 2px solid;
+    }
+
+    .coach-panel.win {
+      display: block;
+      background: rgba(22, 163, 74, 0.15);
+      border-color: #22c55e;
+    }
+
+    .coach-panel.lose {
+      display: block;
+      background: rgba(220, 38, 38, 0.15);
+      border-color: #ef4444;
+    }
+
+    .coach-header {
+      font-weight: 800;
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .coach-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+
+    .btn-retry {
+      background: #475569;
+      color: #fff;
+    }
+
+    .btn-next {
+      background: #22c55e;
+      color: #052e16;
+    }
+
+    .lab-box {
+      background: var(--bg-card);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
+    }
+
+    .lab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .field-group select, .field-group input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .result-card {
+      background: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .big-power {
+      font-size: 2.4rem;
+      font-weight: 900;
+      color: #fde047;
+      margin: 6px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">⚡ PokéCoach: Treinador Prático</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('arena')">🎮 Arena de Treino</button>
+      <button class="tab-btn" onclick="switchTab('lab')">🧮 Calculadora Visual</button>
+    </div>
+  </div>
+
+  <div id="tab-arena">
+    <div class="level-bar" id="level-bar"></div>
+
+    <div class="arena">
+      <div class="field-hazard" id="hazard-badge" style="display:none;">🪨 Stealth Rock Ativo</div>
+
+      <!-- INIMIGO -->
+      <div class="combatant-row enemy-row">
+        <div class="poke-hud">
+          <div class="hud-top">
+            <span class="poke-name" id="enemy-name">Alakazam</span>
+            <div class="badges" id="enemy-types"></div>
+          </div>
+          <div class="hp-container">
+            <div class="hp-bar" id="enemy-hp-bar"></div>
+          </div>
+          <div class="stats-mini" id="enemy-info"></div>
+          <div class="status-tags" id="enemy-tags"></div>
+        </div>
+        <div class="poke-sprite-box">
+          <img id="enemy-sprite" class="poke-img" src="" alt="Inimigo">
+        </div>
+      </div>
+
+      <!-- JOGADOR -->
+      <div class="combatant-row">
+        <div class="poke-hud">
+          <div class="hud-top">
+            <span class="poke-name" id="player-name">Gengar</span>
+            <div class="badges" id="player-types"></div>
+          </div>
+          <div class="hp-container">
+            <div class="hp-bar" id="player-hp-bar"></div>
+          </div>
+          <div class="stats-mini" id="player-stats"></div>
+          <div class="status-tags" id="player-tags"></div>
+        </div>
+        <div class="poke-sprite-box">
+          <img id="player-sprite" class="poke-img" src="" alt="Jogador">
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-log">
+      <div class="log-title" id="scenario-title">Fase 1: O Segredo do STAB + Super Efetivo</div>
+      <div id="scenario-desc"></div>
+    </div>
+
+    <div class="controls-header">
+      <span style="font-size:0.85rem; font-weight:700; color:#cbd5e1;">Escolha sua ação neste turno:</span>
+      <button class="xray-toggle" id="xray-btn" onclick="toggleXray()">🔍 Lente Raio-X: OFF</button>
+    </div>
+
+    <div class="moves-grid" id="moves-grid"></div>
+
+    <div class="bench-section" id="bench-section" style="display:none;">
+      <span style="font-size:0.8rem; color:#94a3b8; font-weight:700;">🔄 Trocar para o Banco de Reservas:</span>
+      <div class="bench-grid" id="bench-grid"></div>
+    </div>
+
+    <div class="coach-panel" id="coach-panel">
+      <div class="coach-header" id="coach-title"></div>
+      <div id="coach-text" style="font-size:0.9rem; line-height:1.5;"></div>
+      <div class="coach-actions">
+        <button class="action-btn btn-retry" onclick="loadScenario(currentIdx)">🔄 Tentar o Turno de Novo</button>
+        <button class="action-btn btn-next" id="next-btn" onclick="nextScenario()">Próxima Fase ➡️</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-lab" class="lab-box">
+    <h3 style="margin-bottom:12px; color:#38bdf8;">Laboratório Visual: Como o Dano Multiplica</h3>
+    <div class="lab-grid">
+      <div class="field-group">
+        <label>Poder Base do Ataque (Power)</label>
+        <input type="number" id="calc-power" value="80" step="5" oninput="updateCalc()">
+      </div>
+      <div class="field-group">
+        <label>O golpe é do mesmo tipo do seu Pokémon? (STAB)</label>
+        <select id="calc-stab" onchange="updateCalc()">
+          <option value="1">Não (1.0x - Sem bônus)</option>
+          <option value="1.5" selected>Sim! (1.5x - Bônus STAB +50%)</option>
+          <option value="2">Sim + Ability Adaptability (2.0x)</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Efetividade no Tipo do Inimigo</label>
+        <select id="calc-eff" onchange="updateCalc()">
+          <option value="0">Imune (0x - Não pega)</option>
+          <option value="0.5">Resistido (0.5x - Metade)</option>
+          <option value="1">Neutro (1.0x - Dano normal)</option>
+          <option value="2" selected>Super Efetivo! (2.0x - Dobro)</option>
+          <option value="4">Fraqueza Dupla!! (4.0x - Dois tipos fracos)</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Item Equipado / Setup</label>
+        <select id="calc-item" onchange="updateCalc()">
+          <option value="1">Nenhum (1.0x)</option>
+          <option value="1.3">Life Orb (+30% / 1.3x)</option>
+          <option value="1.5">Choice Band / Specs (+50% / 1.5x)</option>
+          <option value="2">Swords Dance / Nasty Plot (+2 / 2.0x)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div style="font-size:0.85rem; color:#94a3b8;">PODER REAL DO ATAQUE NO TURNO:</div>
+      <div class="big-power" id="calc-total">240</div>
+      <div id="calc-formula" style="font-size:0.9rem; color:#e2e8f0;"></div>
+    </div>
+  </div>
+
+  <script>
+    const scenarios = [
+      {
+        title: "Fase 1: O Erro Clássico do Poder Bruto vs. Super Efetivo",
+        desc: "Seu <b>Gengar</b> (Especialista em Sp. Atk: 130) está diante de um <b>Alakazam</b> (Psíquico). Lembre-se: Psíquico é fraco contra <b>Fantasma, Sombrio e Inseto</b>. Qual golpe derruba o Alakazam de primeira?",
+        player: { name: "Gengar", spriteId: "gengar", types: ["Fantasma", "Veneno"], hp: 100, stats: "Atk Físico: 65 | <span class='stat-highlight'>Sp. Atk: 130</span> | Speed: 110", tags: ["Atacante Especial"] },
+        enemy: { name: "Alakazam", spriteId: "alakazam", types: ["Psíquico"], hp: 100, info: "Fraco contra: Fantasma, Sombrio, Inseto", tags: ["Defesa Baixa"] },
+        moves: [
+          { name: "Sludge Bomb", type: "Veneno", cat: "🌀 Especial", power: 90, xray: "90 x 1.5 (STAB) x 1 (Neutro) = 135 Poder Real", correct: false, enemyHpAfter: 35, playerHpAfter: 0, msg: "Quase! <b>Sludge Bomb</b> tem poder 90 e ganha STAB (vira 135), mas Veneno dá dano <b>Neutro (1x)</b> em Psíquico. O Alakazam sobreviveu com 35% de vida e te derrubou na volta com Psychic!" },
+          { name: "Shadow Ball", type: "Fantasma", cat: "🌀 Especial", power: 80, xray: "80 x 1.5 (STAB) x 2 (Super Efetivo) = 240 Poder Real!", correct: true, enemyHpAfter: 0, playerHpAfter: 100, msg: "Perfeito! Mesmo tendo poder base 80 (menor que os 90 do Sludge Bomb), o <b>Shadow Ball</b> usa seu Sp. Atk alto (130), ganha <b>+50% de STAB</b> (vira 120) e <b>dobra por ser Super Efetivo (2x)</b> contra Psíquico, batendo com <b>240 de poder</b>!" },
+          { name: "Shadow Punch", type: "Fantasma", cat: "💥 Físico", power: 60, xray: "Usa o Attack fraco do Gengar (65) em vez do Sp. Atk (130)!", correct: false, enemyHpAfter: 55, playerHpAfter: 0, msg: "Cuidado com a categoria do golpe! <b>Shadow Punch</b> é Fantasma, mas é um golpe <b>Físico</b>. Como o Gengar só tem 65 de Attack Físico, o soco saiu fraco e o Alakazam contra-atacou!" },
+          { name: "Sucker Punch", type: "Sombrio", cat: "💥 Físico", power: 70, xray: "Físico (usa 65 Atk) e não tem STAB do Gengar.", correct: false, enemyHpAfter: 50, playerHpAfter: 0, msg: "Golpe Físico em Pokémon Especial! Apesar de Sombrio ser Super Efetivo no Alakazam, o Gengar tem Attack Físico muito baixo (65)." }
+        ],
+        bench: []
+      },
+      {
+        title: "Fase 2: A Armadilha do Hyper Beam e o Golpe de 1 Tipo Só",
+        desc: "Seu <b>Venusaur</b> está contra um <b>Krookodile</b> (Terra / Sombrio). Lembre da regra: seu Pokémon tem 2 tipos, mas <b>o ataque só tem 1 tipo</b>! Qual golpe dá o maior dano sem te prejudicar?",
+        player: { name: "Venusaur", spriteId: "venusaur", types: ["Planta", "Veneno"], hp: 100, stats: "Atk: 82 | <span class='stat-highlight'>Sp. Atk: 100</span> | Speed: 80", tags: ["Especial"] },
+        enemy: { name: "Krookodile", spriteId: "krookodile", types: ["Terra", "Sombrio"], hp: 100, info: "Terra é Fraco contra Planta (2x) e Resiste a Veneno (0.5x)", tags: ["Intimidate"] },
+        moves: [
+          { name: "Hyper Beam", type: "Normal", cat: "🌀 Especial", power: 150, xray: "150 x 1 (Sem STAB) x 1 (Neutro) = 150 (Te trava 1 turno!)", correct: false, enemyHpAfter: 30, playerHpAfter: 0, msg: "Cilada! <b>Hyper Beam</b> parece forte pelo número 150, mas não tem STAB nem vantagem de tipo. O Krookodile aguentou no vermelho e, como você ficou 1 turno parado recarregando, ele te venceu!" },
+          { name: "Giga Drain", type: "Planta", cat: "🌀 Especial", power: 75, xray: "75 x 1.5 (STAB Planta) x 2 (Super Efetivo em Terra) = 225 Poder!", correct: true, enemyHpAfter: 0, playerHpAfter: 100, msg: "Isso aí! Quando você usa <b>Giga Drain</b>, apenas o tipo <b>Planta</b> do ataque entra na conta (o tipo Veneno do Venusaur não atrapalha em nada!). Com STAB (1,5x) + Super Efetivo (2x), o poder 75 vira <b>225</b> e ainda cura sua vida!" },
+          { name: "Sludge Bomb", type: "Veneno", cat: "🌀 Especial", power: 90, xray: "90 x 1.5 (STAB) x 0.5 (Terra resiste a Veneno) = 67.5 Poder", correct: false, enemyHpAfter: 70, playerHpAfter: 20, msg: "Como o Krookodile é do tipo Terra, ele <b>r
